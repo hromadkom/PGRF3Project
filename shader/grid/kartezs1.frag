@@ -2,6 +2,7 @@
 in vec4 position;
 in vec3 normal;
 in vec3 lightDirection;
+in vec3 vertColor;
 out vec4 outColor;
 void main() {
 	vec3 nd = normalize(normal);
