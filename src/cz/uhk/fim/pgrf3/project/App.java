@@ -6,6 +6,7 @@ import com.jogamp.opengl.awt.GLCanvas;
 import com.jogamp.opengl.util.FPSAnimator;
 
 import javax.swing.*;
+import java.awt.*;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 
@@ -18,6 +19,7 @@ public class App {
 
     public App() {
         frame = new JFrame("PGRF 3 - Hromadko");
+        frame.setSize(600,385);
         GLProfile profile = GLProfile.get(GLProfile.GL3);
         GLCapabilities capabilities = new GLCapabilities(profile);
         capabilities.setDepthBits(32);
@@ -29,7 +31,15 @@ public class App {
         canvas.addMouseListener(ren);
         canvas.addMouseMotionListener(ren);
         canvas.addKeyListener(ren);
-        frame.add(canvas);
+
+        frame.setLayout(new BorderLayout());
+        frame.add(canvas, BorderLayout.CENTER);
+
+//        JPanel leftPanel = new JPanel();
+//        leftPanel.setLayout(new BoxLayout(leftPanel, BoxLayout.Y_AXIS));
+//        JComboBox object = new JComboBox(ren.getObjects());
+//        leftPanel.add(object);
+//        frame.add(leftPanel, BorderLayout.WEST);
 
         final FPSAnimator animator = new FPSAnimator(canvas, 60, true);
 

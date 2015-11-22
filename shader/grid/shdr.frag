@@ -33,12 +33,13 @@ vec3 shading(vec3 viewDirection, vec3 lightDirection, vec3 normal){
 	return vec3(am, diff, spec);
 }
 
+
 void main() {
     vec4 textColor = texture(texture, textCoor);
     vec4 totalAmbient = 0.2 * textColor;
 	vec4 color= totalAmbient;
     float spotEffect = dot(normalize(spotDirection), normalize(-lightDirection));
-    if (spotEffect>spotCutOff) {
+   // if (spotEffect>spotCutOff) {
 
 		vec3 shade = shading(viewDirection, lightDirection, normal);
 
@@ -47,7 +48,8 @@ void main() {
     	float att=1.0 / (1.3 + 0.1 * dist);
 
   		color= totalAmbient + (totalDiffuse + totalSpecular);
-  	}
+  	//}
 
-  	outColor = color;
+	outColor = color;
+   	//outColor = vec4(vertColor, 1.0);
 }

@@ -4,8 +4,21 @@ uniform vec3 eyePosition;
 uniform mat4 mat;
 uniform mat4 modelView;
 const float PI=3.1415926;
-    vec3 function (vec2 uv){
-        float azimuth = uv.x*2.0*PI;
+
+vec3 object_torus(vec2 uv){
+    float s = uv.x*2.0*PI;
+    float t = uv.y*2.0*PI;
+
+    vec3 position;
+
+    position.x = 3*cos(s)+cos(t)*cos(s);
+    position.y = 3*sin(s)+cos(t)*sin(s);
+    position.z = sin(t);
+    return position;
+}
+
+vec3 function (vec2 uv){
+    float azimuth = uv.x*2.0*PI;
         float zenith = (uv.y * PI) - (PI/2.0);
         vec3 position;
 
@@ -22,22 +35,17 @@ vec3 normalDiff (vec2 uv){
 }
 
 mat3 tbn(vec2 uv){
-    float delta = 0.01;
-    vec3 pos = function(uv);
-    vec3 p1 = vec3(pos.x+delta,pos.y,pos.z);
-    vec3 p2= vec3(pos.x-delta,pos.y,pos.z);
-    vec3 tangent = (p2 - p1);
+    float delta = 0.001;
+    vec3 x = (function(uv+vec2(delta,0))-function(uv-vec2(delta,0)));
+    vec3 y = (function(uv+vec2(0,delta))-function(uv-vec2(0,delta)));
+    vec3 z = cross(x,y);
 
-    p1 = vec3(pos.x,pos.y+delta,pos.z);
-    p2= vec3(pos.x,pos.y-delta,pos.z);
-    vec3 bitangent = (p2 - p1);
+    vec3 yy = cross(z,x);
 
-    vec3 normal = cross(tangent,bitangent);
-   // bitangent = cross(normal, tangent);
-    return mat3(tangent, bitangent, normal);
+    return mat3(normalize(x), normalize(yy), normalize(z));
 }
 
-out vec4 position;
+out vec3 position;
 out vec3 normal;
 out vec3 lightDirection;
 out vec3 viewDirection;
@@ -48,19 +56,20 @@ out vec3 vertColor;
 void main()
 {
     mat3 TBN = tbn(inPosition);
-    vec3 position = function(inPosition);
+    position = function(inPosition);
     normal = normalDiff(inPosition);
     //normal = gl_NormalMatrix*normal;
     vec3 lightPosition = vec3(5.0,5.0, 2.5);
     viewDirection = (eyePosition) - position;
     viewDirection = viewDirection * TBN;
     lightDirection = lightPosition - position;
+    dist = length(lightDirection);
     lightDirection = lightDirection * TBN;
 
     textCoor = vec2(inPosition.x,inPosition.y);
     //textCoor.y += 0.2*sin(2*PI*textCoor.x);
-    dist = length(lightDirection);
 
+    vertColor = vec3(inPosition.x, inPosition.y, 0.0);
     vertColor = normal;
     gl_Position= mat* vec4(position,1.0);
 }

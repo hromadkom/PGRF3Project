@@ -1,11 +1,9 @@
 package cz.uhk.fim.pgrf3.project;
 
-import com.jogamp.opengl.GL;
 import com.jogamp.opengl.GL3;
 import com.jogamp.opengl.GLAutoDrawable;
 import com.jogamp.opengl.GLEventListener;
 import com.jogamp.opengl.math.Matrix4;
-import com.sun.javafx.geom.Vec3f;
 import geom.GL3Generator;
 import geom.GL3GeomGenerator;
 import transforms.*;
@@ -26,21 +24,23 @@ public class Renderer implements GLEventListener, MouseListener, MouseMotionList
 
     G3OGLBuffers buffers;
 
-    int shaderProgram, locMat, modelView, eyeVec, baseColor, normalMat, spotCutOff, spotDirection, locTime;
+    int shaderProgram, shd_locMat, shd_modelView, shd_eyeVec, shd_baseColor, shd_normalMat, shd_spotCutOff, shd_spotDirection, shd_locTime, shd_usedObject, shd_lightPosition, shd_shading, shd_spotlight;
 
     Col color = new Col(0.2f, 0.3f, 0.4f, 1.0f);
 
-    G3OGLTexture texture, normalTexture;
+    G3OGLTexture texture, normalTexture, heightTexture;
 
     Camera camera = new Camera();
 
     Mat4 proj;
-
+    // lights
+    Vec3D lightPosition = new Vec3D(10.0, 10.0, 2.5);
+    Vec3D spotLightDirection = new Vec3D(-0.3,-0.3,-0.3);
     float spotLightCutOff;
 
-    Vec3D spotLightDirection = new Vec3D(-0.3,-0.3,-0.3);
-
-    float time = 0;
+    int object = 1;
+    int perVertexShading = 0;
+    int spotlight = 0;
 
     public void init(GLAutoDrawable glDrawable){
         GL3 gl = glDrawable.getGL().getGL3();
@@ -48,24 +48,32 @@ public class Renderer implements GLEventListener, MouseListener, MouseMotionList
         System.out.println("Init GL is " + gl.getClass().getName());
 
         shaderProgram = G3ShaderUtils.loadProgram(gl,"./shader/grid/sphereblinphongfull");
+        //shaderProgram = G3ShaderUtils.loadProgram(gl,"./shader/grid/normalMapping");
+        //texture = new G3OGLTexture(gl,"./textures/cubemap_blue_sofa_negative_x.png");
         texture = new G3OGLTexture(gl,"./textures/bricks.jpg");
+        texture.texture.setMustFlipVertically(true);
         normalTexture = new G3OGLTexture(gl, "./textures/bricksn.png");
+        heightTexture = new G3OGLTexture(gl, "./textures/bricksh.png");
         createBuffers(gl);
 
         spotLightCutOff = (float) Math.cos(Math.PI/8.0);
 
-        locMat = gl.glGetUniformLocation(shaderProgram, "mat");
-        modelView = gl.glGetUniformLocation(shaderProgram, "modelView");
-        eyeVec = gl.glGetUniformLocation(shaderProgram, "eyePosition");
-        baseColor = gl.glGetUniformLocation(shaderProgram, "baseColor");
-        normalMat = gl.glGetUniformLocation(shaderProgram, "normalMat");
-        spotCutOff = gl.glGetUniformLocation(shaderProgram, "spotCutOff");
-        spotDirection = gl.glGetUniformLocation(shaderProgram, "spotDirection");
-        locTime = gl.glGetUniformLocation(shaderProgram, "time");
+        shd_locMat = gl.glGetUniformLocation(shaderProgram, "mat");
+        shd_modelView = gl.glGetUniformLocation(shaderProgram, "modelView");
+        shd_eyeVec = gl.glGetUniformLocation(shaderProgram, "eyePosition");
+        shd_baseColor = gl.glGetUniformLocation(shaderProgram, "baseColor");
+        shd_normalMat = gl.glGetUniformLocation(shaderProgram, "normalMat");
+        shd_spotCutOff = gl.glGetUniformLocation(shaderProgram, "spotCutOff");
+        shd_spotDirection = gl.glGetUniformLocation(shaderProgram, "spotDirection");
+        shd_locTime = gl.glGetUniformLocation(shaderProgram, "time");
+        shd_usedObject = gl.glGetUniformLocation(shaderProgram, "usedObject");
+        shd_lightPosition = gl.glGetUniformLocation(shaderProgram, "lightPosition");
+        shd_shading = gl.glGetUniformLocation(shaderProgram, "perVertexShading");
+        shd_spotlight = gl.glGetUniformLocation(shaderProgram, "spotLightEnabled");
 
         //texture = new G3OGLTexture();
 
-        camera.setPosition(new Vec3D(5, 5, 2.5));
+        camera.setPosition(new Vec3D(10, 10, 2.5));
         camera.setAzimuth(Math.PI * 1.25);
         camera.setZenith(Math.PI * -0.125);
 
@@ -75,7 +83,7 @@ public class Renderer implements GLEventListener, MouseListener, MouseMotionList
     private void createBuffers(GL3 gl) {
         GL3Generator generator = null;
         try {
-            generator = new GL3GeomGenerator(50,50);
+            generator = new GL3GeomGenerator(30,30);
         } catch (InvalidAttributesException e) {
             e.printStackTrace();
         }
@@ -88,20 +96,21 @@ public class Renderer implements GLEventListener, MouseListener, MouseMotionList
         GL3 gl = glDrawable.getGL().getGL3();
         //gl.glPolygonMode(GL.GL_FRONT_AND_BACK, GL3.GL_LINE);
 
-        time += 0.1;
-
         gl.glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         gl.glClear(GL3.GL_COLOR_BUFFER_BIT | GL3.GL_DEPTH_BUFFER_BIT);
 
         gl.glUseProgram(shaderProgram);
-        gl.glUniformMatrix4fv(locMat, 1, false,
+        gl.glUniformMatrix4fv(shd_locMat, 1, false,
                 ToFloatArray.convert(camera.getViewMatrix().mul(proj)), 0);
-        gl.glUniformMatrix4fv(modelView, 1, false, ToFloatArray.convert(camera.getViewMatrix()),0);
-        gl.glUniform3fv(eyeVec, 1, ToFloatArray.convert(camera.getEye()), 0);
-        gl.glUniform4fv(baseColor, 1, ToFloatArray.convert(color), 0);
-        gl.glUniform1f(spotCutOff, spotLightCutOff);
-        gl.glUniform3fv(spotDirection,1 ,ToFloatArray.convert(spotLightDirection), 0);
-        gl.glUniform1f(locTime, time); // musi byt nastaven spravy shader
+        gl.glUniformMatrix4fv(shd_modelView, 1, false, ToFloatArray.convert(camera.getViewMatrix()),0);
+        gl.glUniform3fv(shd_eyeVec, 1, ToFloatArray.convert(camera.getEye()), 0);
+        gl.glUniform4fv(shd_baseColor, 1, ToFloatArray.convert(color), 0);
+        gl.glUniform1f(shd_spotCutOff, spotLightCutOff);
+        gl.glUniform3fv(shd_spotDirection,1 ,ToFloatArray.convert(spotLightDirection), 0);
+        gl.glUniform3fv(shd_lightPosition, 1, ToFloatArray.convert(lightPosition),0);
+        gl.glUniform1i(shd_usedObject, object);
+        gl.glUniform1i(shd_shading, perVertexShading);
+        gl.glUniform1i(shd_shading, spotlight);
 
         Mat4 normal = camera.getViewMatrix();
 
@@ -109,6 +118,7 @@ public class Renderer implements GLEventListener, MouseListener, MouseMotionList
 
         texture.bind(shaderProgram, "texture", 0);
         normalTexture.bind(shaderProgram, "normalTexture", 1);
+        heightTexture.bind(shaderProgram, "heightTexture", 2);
         buffers.draw(GL3.GL_TRIANGLES, shaderProgram);
     }
 
@@ -194,6 +204,38 @@ public class Renderer implements GLEventListener, MouseListener, MouseMotionList
             case KeyEvent.VK_F:
                 camera.mulRadius(1.1f);
                 break;
+            case KeyEvent.VK_1:
+            case KeyEvent.VK_NUMPAD1:
+                object = 0;
+                break;
+            case KeyEvent.VK_2:
+            case KeyEvent.VK_NUMPAD2:
+                object = 1;
+                break;
+            case KeyEvent.VK_3:
+            case KeyEvent.VK_NUMPAD3:
+                object = 2;
+                break;
+            case KeyEvent.VK_4:
+            case KeyEvent.VK_NUMPAD4:
+                object = 3;
+                break;
+            case KeyEvent.VK_5:
+            case KeyEvent.VK_NUMPAD5:
+                object = 4;
+                break;
+            case KeyEvent.VK_6:
+            case KeyEvent.VK_NUMPAD6:
+                object = 5;
+                break;
+            case KeyEvent.VK_7:
+            case KeyEvent.VK_NUMPAD7:
+                object = 6;
+                break;
+            case KeyEvent.VK_8:
+            case KeyEvent.VK_NUMPAD8:
+                object = 7;
+                break;
         }
     }
 
@@ -203,4 +245,9 @@ public class Renderer implements GLEventListener, MouseListener, MouseMotionList
     public void keyTyped(KeyEvent e) {
     }
 
+    public String[] getObjects(){
+        String[] objects = new String[6];
+        objects[0] = "Torus";
+        return objects;
+    }
 }
