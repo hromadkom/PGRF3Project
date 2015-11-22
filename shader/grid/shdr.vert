@@ -4,15 +4,29 @@ uniform vec3 eyePosition;
 uniform mat4 mat;
 uniform mat4 modelView;
 uniform float time;
+
+uniform sampler2D texture;
+
 uniform int usedObject;
 uniform int perVertexShading;
+uniform int extendedMapping;
+
 uniform vec3 lightPosition;
 const float PI=3.1415926;
 
-out vec4 position;
+uniform vec3 spotDirection;
+uniform float spotCutOff;
+uniform int spotLightEnabled;
+uniform float lightDownturn;
+
+out vec3 position;
 out vec3 normal;
 out vec3 lightDirection;
 out vec3 viewDirection;
+out vec3 lightDirectionTBN;
+out vec3 viewDirectionTBN;
+out vec3 perVertexShades;
+
 out float dist;
 out vec2 textCoor;
 out vec3 vertColor;
@@ -181,17 +195,29 @@ vec3 shading(vec3 viewDirection, vec3 lightDirection, vec3 normal){
 	return vec3(am, diff, spec);
 }
 
+
 void main()
 {
-    vec3 position = function(inPosition);
+    position = function(inPosition);
     normal = normalDiff(inPosition);
     //normal = gl_NormalMatrix*normal;
-    viewDirection = (eyePosition) - position;
-    lightDirection = lightPosition - position;
-
-    textCoor = vec2(inPosition.x,inPosition.y);
+    vec3 lightPos = lightPosition;
+    viewDirection = eyePosition - position;
+    lightDirection = lightPos - position;
     dist = length(lightDirection);
 
-    vertColor = normal;
+    viewDirectionTBN = viewDirection;
+    lightDirectionTBN = lightDirection;
+    if(extendedMapping == 1 && perVertexShading == 0){
+        mat3 TBN = tbn(inPosition);
+        viewDirectionTBN = viewDirection * TBN;
+        lightDirectionTBN = lightDirection * TBN;
+    }
+    textCoor = vec2(inPosition.x,inPosition.y);
+        //textCoor.y += 0.2*sin(2*PI*textCoor.x);
     gl_Position= mat* vec4(position,1.0);
+
+    if(perVertexShading == 1){
+   	    perVertexShades = shading(viewDirectionTBN, lightDirectionTBN, normal);
+   	}
 }

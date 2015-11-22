@@ -20,13 +20,21 @@ import java.awt.event.*;
  */
 public class Renderer implements GLEventListener, MouseListener, MouseMotionListener, KeyListener {
 
+    private static final int SHOW_COLOR_NOTHING = 0;
+    private static final int SHOW_COLOR_POSITION = 1;
+    private static final int SHOW_COLOR_NORMAL = 2;
+    private static final int SHOW_COLOR_COLOR = 3;
+
     int width, height, ox, oy;
 
     G3OGLBuffers buffers;
 
-    int shaderProgram, shd_locMat, shd_modelView, shd_eyeVec, shd_baseColor, shd_normalMat, shd_spotCutOff, shd_spotDirection, shd_locTime, shd_usedObject, shd_lightPosition, shd_shading, shd_spotlight;
+    int shaderProgram;
+    int shd_locMat, shd_modelView, shd_eyeVec, shd_baseColor, shd_normalMat, shd_spotCutOff;
+    int shd_spotDirection, shd_locTime, shd_usedObject, shd_lightPosition, shd_shading, shd_spotlight, shd_extendedMapping;
+    int shd_showColor, shd_lightDownturn;
 
-    Col color = new Col(0.2f, 0.3f, 0.4f, 1.0f);
+    Col color = new Col(0.2f, 0.3f, 0.8f, 1.0f);
 
     G3OGLTexture texture, normalTexture, heightTexture;
 
@@ -34,20 +42,24 @@ public class Renderer implements GLEventListener, MouseListener, MouseMotionList
 
     Mat4 proj;
     // lights
-    Vec3D lightPosition = new Vec3D(10.0, 10.0, 2.5);
-    Vec3D spotLightDirection = new Vec3D(-0.3,-0.3,-0.3);
+    Vec3D lightPosition = new Vec3D(7.0, 7.0, 2.5);
+    Vec3D spotLightDirection = new Vec3D(-0.3,-0.3,-0.25);
     float spotLightCutOff;
 
     int object = 1;
     int perVertexShading = 0;
     int spotlight = 0;
+    int extendedMapping = 1;
+
+    int showColorStatus = 0;
+    float lightDownturn = 0.1f;
 
     public void init(GLAutoDrawable glDrawable){
         GL3 gl = glDrawable.getGL().getGL3();
 
         System.out.println("Init GL is " + gl.getClass().getName());
 
-        shaderProgram = G3ShaderUtils.loadProgram(gl,"./shader/grid/sphereblinphongfull");
+        shaderProgram = G3ShaderUtils.loadProgram(gl,"./shader/grid/shdr");
         //shaderProgram = G3ShaderUtils.loadProgram(gl,"./shader/grid/normalMapping");
         //texture = new G3OGLTexture(gl,"./textures/cubemap_blue_sofa_negative_x.png");
         texture = new G3OGLTexture(gl,"./textures/bricks.jpg");
@@ -70,6 +82,9 @@ public class Renderer implements GLEventListener, MouseListener, MouseMotionList
         shd_lightPosition = gl.glGetUniformLocation(shaderProgram, "lightPosition");
         shd_shading = gl.glGetUniformLocation(shaderProgram, "perVertexShading");
         shd_spotlight = gl.glGetUniformLocation(shaderProgram, "spotLightEnabled");
+        shd_extendedMapping = gl.glGetUniformLocation(shaderProgram, "extendedMapping");
+        shd_showColor = gl.glGetUniformLocation(shaderProgram, "showColor");
+        shd_lightDownturn = gl.glGetUniformLocation(shaderProgram, "lightDownturn");
 
         //texture = new G3OGLTexture();
 
@@ -83,7 +98,7 @@ public class Renderer implements GLEventListener, MouseListener, MouseMotionList
     private void createBuffers(GL3 gl) {
         GL3Generator generator = null;
         try {
-            generator = new GL3GeomGenerator(30,30);
+            generator = new GL3GeomGenerator(50,50);
         } catch (InvalidAttributesException e) {
             e.printStackTrace();
         }
@@ -110,12 +125,12 @@ public class Renderer implements GLEventListener, MouseListener, MouseMotionList
         gl.glUniform3fv(shd_lightPosition, 1, ToFloatArray.convert(lightPosition),0);
         gl.glUniform1i(shd_usedObject, object);
         gl.glUniform1i(shd_shading, perVertexShading);
-        gl.glUniform1i(shd_shading, spotlight);
+        gl.glUniform1i(shd_spotlight, spotlight);
+        gl.glUniform1i(shd_extendedMapping, extendedMapping);
+        gl.glUniform1i(shd_showColor, showColorStatus);
+        gl.glUniform1f(shd_lightDownturn, lightDownturn);
 
         Mat4 normal = camera.getViewMatrix();
-
-       // System.out.println(camera.getEye());
-
         texture.bind(shaderProgram, "texture", 0);
         normalTexture.bind(shaderProgram, "normalTexture", 1);
         heightTexture.bind(shaderProgram, "heightTexture", 2);
@@ -236,6 +251,46 @@ public class Renderer implements GLEventListener, MouseListener, MouseMotionList
             case KeyEvent.VK_NUMPAD8:
                 object = 7;
                 break;
+            case KeyEvent.VK_E:
+                extendedMapping = extendedMapping == 1 ? 0 : 1;
+                break;
+            case KeyEvent.VK_L:
+                spotlight = spotlight == 1? 0: 1;
+                break;
+            case KeyEvent.VK_V:
+                if(perVertexShading == 0){
+                    extendedMapping = 0;
+                    perVertexShading = 1;
+                }else{
+                    perVertexShading = 0;
+                }
+                break;
+            case KeyEvent.VK_N:
+                showColorStatus = showColorStatus != SHOW_COLOR_NORMAL ? SHOW_COLOR_NORMAL: SHOW_COLOR_NOTHING;
+                break;
+            case KeyEvent.VK_P:
+                showColorStatus = showColorStatus != SHOW_COLOR_POSITION ? SHOW_COLOR_POSITION: SHOW_COLOR_NOTHING;
+                break;
+            case KeyEvent.VK_C:
+                showColorStatus = showColorStatus != SHOW_COLOR_COLOR ? SHOW_COLOR_COLOR: SHOW_COLOR_NOTHING;
+                break;
+            case KeyEvent.VK_DOWN:
+                spotLightDirection.y += 0.05;
+                break;
+            case KeyEvent.VK_UP:
+                spotLightDirection.y -= 0.05;
+                break;
+            case KeyEvent.VK_LEFT:
+                spotLightDirection.x += 0.05;
+                break;
+            case KeyEvent.VK_RIGHT:
+                spotLightDirection.x -= 0.05;
+                break;
+            case KeyEvent.VK_U:
+                if (lightDownturn < 1) lightDownturn += 0.05;
+                break;
+            case KeyEvent.VK_J:
+                if (lightDownturn > 0) lightDownturn -= 0.05;
         }
     }
 
