@@ -59,9 +59,7 @@ public class Renderer implements GLEventListener, MouseListener, MouseMotionList
 
         System.out.println("Init GL is " + gl.getClass().getName());
 
-        shaderProgram = G3ShaderUtils.loadProgram(gl,"./shader/grid/shdr");
-        //shaderProgram = G3ShaderUtils.loadProgram(gl,"./shader/grid/normalMapping");
-        //texture = new G3OGLTexture(gl,"./textures/cubemap_blue_sofa_negative_x.png");
+        shaderProgram = G3ShaderUtils.loadProgram(gl,"./shader/shdr");
         texture = new G3OGLTexture(gl,"./textures/bricks.jpg");
         texture.texture.setMustFlipVertically(true);
         normalTexture = new G3OGLTexture(gl, "./textures/bricksn.png");
@@ -250,6 +248,10 @@ public class Renderer implements GLEventListener, MouseListener, MouseMotionList
             case KeyEvent.VK_8:
             case KeyEvent.VK_NUMPAD8:
                 object = 7;
+                break;
+            case KeyEvent.VK_9:
+            case KeyEvent.VK_NUMPAD9:
+                object = 8;
                 break;
             case KeyEvent.VK_E:
                 extendedMapping = extendedMapping == 1 ? 0 : 1;

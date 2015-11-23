@@ -36,6 +36,13 @@ vec3 object_plain(vec2 uv){
     return vec3(uv,1.0);
 }
 
+vec3 object_hat (vec2 uv){
+    float s = (uv.x*2.0)-1.0;
+    float t = (uv.y*2.0)-1.0;
+    float z = (cos(sqrt(20*pow(s,2.0)+20*pow(t,2.0))))/2.0;
+    return vec3(uv,z);
+}
+
 vec3 object_torus(vec2 uv){
     float s = uv.x*2.0*PI;
     float t = uv.y*2.0*PI;
@@ -147,6 +154,9 @@ vec3 function (vec2 uv){
             break;
         case 7:
             pos = object_my_cylindrical(uv);
+            break;
+        case 8:
+            pos = object_hat(uv);
             break;
         default:
             pos = object_sphere(uv);
